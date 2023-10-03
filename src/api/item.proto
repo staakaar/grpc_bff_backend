@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "src/_proto";
+
+// packageの宣言
+package item;
+
+// サービスの定義
+service ItemService {
+	// サービスが持つメソッドの定義
+	rpc GetItem (ItemRequest) returns (ItemResponse); 
+}
+
+message ItemRequest {
+    int32 id = 1;
+}
+
+message ItemResponse {
+    int32 id = 1;
+    int32 itemNo = 2;
+    string name = 3;
+    int64 quantity = 4;
+    string unit = 5;
+    int64 price = 6;
+    string remark = 7;
+}
