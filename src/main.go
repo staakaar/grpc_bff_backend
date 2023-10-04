@@ -10,6 +10,7 @@ import (
 	context "context"
 
 	itemProto "./_proto/api/"
+	"google.golang.org/grpc/reflection"
 
 	"google.golang.org/grpc"
 )
@@ -23,6 +24,8 @@ func main() {
 
 	server := grpc.NewServer()
 	itemProto.RegisterItemServiceServer(server, NewMyServer())
+
+	reflection.Register(server)
 
 	go func() {
 		log.Printf("grpc server start %v", port)
