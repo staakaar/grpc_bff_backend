@@ -9,7 +9,8 @@ import (
 
 	context "context"
 
-	itemProto "./_proto/api/"
+	itemProto "grpc_bff_backend/src/_proto/api"
+
 	"google.golang.org/grpc/reflection"
 
 	"google.golang.org/grpc"
@@ -41,7 +42,7 @@ func main() {
 }
 
 type myServer struct {
-	itemProto.UnimplementedGreetingServiceServer
+	itemProto.UnimplementedItemServiceServer
 }
 
 func NewMyServer() *myServer {
@@ -49,9 +50,13 @@ func NewMyServer() *myServer {
 }
 
 func (s *myServer) Hello(ctx context.Context, req *itemProto.ItemRequest) (*itemProto.ItemResponse, error) {
-	// リクエストからnameフィールドを取り出して
-	// "Hello, [名前]!"というレスポンスを返す
-	return &itemProto.HelloResponse{
-		Message: fmt.Sprintf("Hello, item request id %s!", req.GetId()),
+	return &itemProto.ItemResponse{
+		Id:       0,
+		ItemNo:   0,
+		Name:     "",
+		Quantity: 0,
+		Unit:     "",
+		Price:    0,
+		Remark:   "",
 	}, nil
 }
