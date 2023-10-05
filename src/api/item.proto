@@ -2,13 +2,13 @@ syntax = "proto3";
 
 option go_package = "src/_proto";
 
-// packageの宣言
 package item;
 
 // サービスの定義
 service ItemService {
 	// サービスが持つメソッドの定義
 	rpc GetItem (ItemRequest) returns (ItemResponse); 
+    rpc ItemServerStream (ItemRequest) returns (ItemResponse);
 }
 
 message ItemRequest {

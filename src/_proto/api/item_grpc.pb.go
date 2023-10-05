@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type ItemServiceClient interface {
 	// サービスが持つメソッドの定義
 	GetItem(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*ItemResponse, error)
+	ItemServerStream(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*ItemResponse, error)
 }
 
 type itemServiceClient struct {
@@ -43,12 +44,22 @@ func (c *itemServiceClient) GetItem(ctx context.Context, in *ItemRequest, opts .
 	return out, nil
 }
 
+func (c *itemServiceClient) ItemServerStream(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*ItemResponse, error) {
+	out := new(ItemResponse)
+	err := c.cc.Invoke(ctx, "/item.ItemService/ItemServerStream", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemServiceServer is the server API for ItemService service.
 // All implementations must embed UnimplementedItemServiceServer
 // for forward compatibility
 type ItemServiceServer interface {
 	// サービスが持つメソッドの定義
 	GetItem(context.Context, *ItemRequest) (*ItemResponse, error)
+	ItemServerStream(context.Context, *ItemRequest) (*ItemResponse, error)
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -58,6 +69,9 @@ type UnimplementedItemServiceServer struct {
 
 func (UnimplementedItemServiceServer) GetItem(context.Context, *ItemRequest) (*ItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItem not implemented")
+}
+func (UnimplementedItemServiceServer) ItemServerStream(context.Context, *ItemRequest) (*ItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ItemServerStream not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 
@@ -90,6 +104,24 @@ func _ItemService_GetItem_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemService_ItemServerStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).ItemServerStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/item.ItemService/ItemServerStream",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).ItemServerStream(ctx, req.(*ItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemService_ServiceDesc is the grpc.ServiceDesc for ItemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +132,10 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetItem",
 			Handler:    _ItemService_GetItem_Handler,
+		},
+		{
+			MethodName: "ItemServerStream",
+			Handler:    _ItemService_ItemServerStream_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

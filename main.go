@@ -49,14 +49,14 @@ func NewMyServer() *myServer {
 	return &myServer{}
 }
 
-func (s *myServer) Hello(ctx context.Context, req *itemProto.ItemRequest) (*itemProto.ItemResponse, error) {
+func (s *myServer) GetItem(ctx context.Context, req *itemProto.ItemRequest) (*itemProto.ItemResponse, error) {
 	return &itemProto.ItemResponse{
-		Id:       0,
-		ItemNo:   0,
-		Name:     "",
-		Quantity: 0,
-		Unit:     "",
-		Price:    0,
-		Remark:   "",
+		Id:       1,
+		ItemNo:   1,
+		Name:     "品目1",
+		Quantity: 100,
+		Unit:     "個",
+		Price:    12000,
+		Remark:   "test",
 	}, nil
 }
