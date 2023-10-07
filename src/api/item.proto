@@ -8,7 +8,8 @@ package item;
 service ItemService {
 	// サービスが持つメソッドの定義
 	rpc GetItem (ItemRequest) returns (ItemResponse); 
-    rpc ItemServerStream (ItemRequest) returns (ItemResponse);
+    rpc ItemServerStream (ItemRequest) returns (stream ItemResponse);
+    rpc ItemClientStream (stream ItemRequest) returns (ItemResponse);
 }
 
 message ItemRequest {

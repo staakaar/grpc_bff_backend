@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -59,4 +61,44 @@ func (s *myServer) GetItem(ctx context.Context, req *itemProto.ItemRequest) (*it
 		Price:    12000,
 		Remark:   "test",
 	}, nil
+}
+
+func (s *myServer) ItemServerStream(req *itemProto.ItemRequest, stream itemProto.ItemService_ItemServerStreamServer) error {
+	resCount := 5
+	for i := 0; i < resCount; i++ {
+		if err := stream.Send(&itemProto.ItemResponse{
+			Id:       1,
+			ItemNo:   1,
+			Name:     "品目1",
+			Quantity: 100,
+			Unit:     "個",
+			Price:    12000,
+			Remark:   "test",
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *myServer) ItemClientStream(stream itemProto.ItemService_ItemClientStreamServer) error {
+	nameList := make([]int32, 0)
+	for {
+		req, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			return stream.SendAndClose(&itemProto.ItemResponse{
+				Id:       1,
+				ItemNo:   1,
+				Name:     "品目1",
+				Quantity: 100,
+				Unit:     "個",
+				Price:    12000,
+				Remark:   "test",
+			})
+		}
+		if err != nil {
+			return err
+		}
+		nameList = append(nameList, req.GetId())
+	}
 }

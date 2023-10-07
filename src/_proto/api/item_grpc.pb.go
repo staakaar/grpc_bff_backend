@@ -24,7 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type ItemServiceClient interface {
 	// サービスが持つメソッドの定義
 	GetItem(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*ItemResponse, error)
-	ItemServerStream(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*ItemResponse, error)
+	ItemServerStream(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (ItemService_ItemServerStreamClient, error)
+	ItemClientStream(ctx context.Context, opts ...grpc.CallOption) (ItemService_ItemClientStreamClient, error)
 }
 
 type itemServiceClient struct {
@@ -44,13 +45,70 @@ func (c *itemServiceClient) GetItem(ctx context.Context, in *ItemRequest, opts .
 	return out, nil
 }
 
-func (c *itemServiceClient) ItemServerStream(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*ItemResponse, error) {
-	out := new(ItemResponse)
-	err := c.cc.Invoke(ctx, "/item.ItemService/ItemServerStream", in, out, opts...)
+func (c *itemServiceClient) ItemServerStream(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (ItemService_ItemServerStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ItemService_ServiceDesc.Streams[0], "/item.ItemService/ItemServerStream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &itemServiceItemServerStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ItemService_ItemServerStreamClient interface {
+	Recv() (*ItemResponse, error)
+	grpc.ClientStream
+}
+
+type itemServiceItemServerStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *itemServiceItemServerStreamClient) Recv() (*ItemResponse, error) {
+	m := new(ItemResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *itemServiceClient) ItemClientStream(ctx context.Context, opts ...grpc.CallOption) (ItemService_ItemClientStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ItemService_ServiceDesc.Streams[1], "/item.ItemService/ItemClientStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &itemServiceItemClientStreamClient{stream}
+	return x, nil
+}
+
+type ItemService_ItemClientStreamClient interface {
+	Send(*ItemRequest) error
+	CloseAndRecv() (*ItemResponse, error)
+	grpc.ClientStream
+}
+
+type itemServiceItemClientStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *itemServiceItemClientStreamClient) Send(m *ItemRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *itemServiceItemClientStreamClient) CloseAndRecv() (*ItemResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(ItemResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ItemServiceServer is the server API for ItemService service.
@@ -59,7 +117,8 @@ func (c *itemServiceClient) ItemServerStream(ctx context.Context, in *ItemReques
 type ItemServiceServer interface {
 	// サービスが持つメソッドの定義
 	GetItem(context.Context, *ItemRequest) (*ItemResponse, error)
-	ItemServerStream(context.Context, *ItemRequest) (*ItemResponse, error)
+	ItemServerStream(*ItemRequest, ItemService_ItemServerStreamServer) error
+	ItemClientStream(ItemService_ItemClientStreamServer) error
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -70,8 +129,11 @@ type UnimplementedItemServiceServer struct {
 func (UnimplementedItemServiceServer) GetItem(context.Context, *ItemRequest) (*ItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItem not implemented")
 }
-func (UnimplementedItemServiceServer) ItemServerStream(context.Context, *ItemRequest) (*ItemResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ItemServerStream not implemented")
+func (UnimplementedItemServiceServer) ItemServerStream(*ItemRequest, ItemService_ItemServerStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method ItemServerStream not implemented")
+}
+func (UnimplementedItemServiceServer) ItemClientStream(ItemService_ItemClientStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method ItemClientStream not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 
@@ -104,22 +166,51 @@ func _ItemService_GetItem_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ItemService_ItemServerStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ItemRequest)
-	if err := dec(in); err != nil {
+func _ItemService_ItemServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ItemRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ItemServiceServer).ItemServerStream(m, &itemServiceItemServerStreamServer{stream})
+}
+
+type ItemService_ItemServerStreamServer interface {
+	Send(*ItemResponse) error
+	grpc.ServerStream
+}
+
+type itemServiceItemServerStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *itemServiceItemServerStreamServer) Send(m *ItemResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _ItemService_ItemClientStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ItemServiceServer).ItemClientStream(&itemServiceItemClientStreamServer{stream})
+}
+
+type ItemService_ItemClientStreamServer interface {
+	SendAndClose(*ItemResponse) error
+	Recv() (*ItemRequest, error)
+	grpc.ServerStream
+}
+
+type itemServiceItemClientStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *itemServiceItemClientStreamServer) SendAndClose(m *ItemResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *itemServiceItemClientStreamServer) Recv() (*ItemRequest, error) {
+	m := new(ItemRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ItemServiceServer).ItemServerStream(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/item.ItemService/ItemServerStream",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemServiceServer).ItemServerStream(ctx, req.(*ItemRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // ItemService_ServiceDesc is the grpc.ServiceDesc for ItemService service.
@@ -133,11 +224,18 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetItem",
 			Handler:    _ItemService_GetItem_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "ItemServerStream",
-			Handler:    _ItemService_ItemServerStream_Handler,
+			StreamName:    "ItemServerStream",
+			Handler:       _ItemService_ItemServerStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ItemClientStream",
+			Handler:       _ItemService_ItemClientStream_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/item.proto",
 }
